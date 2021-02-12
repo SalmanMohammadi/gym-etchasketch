@@ -1,62 +1,101 @@
 import gym
 import sys
+import numpy as np
 from gym import error, spaces, utils, logger
 from gym.utils import seeding
+import scipy.misc as smp
 
 
 class EtchASketchEnv(gym.Env):
     """
     Description:
-        A pole is attached by an un-actuated joint to a cart, which moves along
-        a frictionless track. The pendulum starts upright, and the goal is to
-        prevent it from falling over by increasing and reducing the cart's
-        velocity. 
-        
+        # https://openaccess.thecvf.com/content_ICCV_2019/papers/Huang_Learning_to_Paint_With_Model-Based_Deep_Reinforcement_Learning_ICCV_2019_paper.pdf
+        # is quite relevant
     Source:
-        This environment corresponds to the version of the cart-pole problem
-        described by Barto, Sutton, and Anderson
 
     Observation:
         Type: Box(NxN)
-        
+
         The black-and-white pixel values of the NxN pixel screen.
 
 
     Actions:
-        Type: Discrete (4)
-        Box[0] rotates the left controller left
-        Box[1] rotates the left controller right
-        Box[2] rotates the right controller left
-        Box[3] rotates the right controller right
-
-        Box[i] == Box[j] means no movement for i,j in [(0,1), (2, 3)]
+        Move
+        Type: Box (2)
+        Box[0] rotates the left knob [-1, 1] -> [-2PI, 2PI], moving the cursor sin(x)
+        Box[1] rotates the right knob[-1, 1] -> [-2PI, 2PI], moving the cursor cos(x)
+        Reset
+        Type: Discrete(1)
+        Num
+        0   Don't reset the state
+        1   Reset the state
 
     Reward:
-        Reward is 1 for every step taken, including the termination step
-        Starting State:
-        All observations are assigned a uniform random value in [-0.05..0.05]
+
+        The reward will be given at the end of an episode (sparse) as the negative log bernoulli likelihood 
+        between the pixel values of the target image and the current environment.
 
     Episode Termination:
-        Pole Angle is more than 12 degrees.
-        Cart Position is more than 2.4 (center of the cart reaches the edge of
-        the display).
-        Episode length is greater than 200.
+        Episode length is greater than __.
 
     Solved Requirements:
-        Considered solved when the average return is greater than or equal to
-        195.0 over 100 consecutive trials.
-    """
-    metadata = {'render.modes': ['human']}
 
-    def __init__(self, image_shape):
-      self.observation_space = spaces.Box(low=0, high=1, shape=image_shape)
-      self.action_space = spaces.Box(low=0, high=1, shape=(2,))
+    """
+    metadata = {'render.modes': ['human', 'array']}
+
+    def __init__(self, shape: (int, int)):
+        self.shape = shape
+        self.action_space = spaces.Dict(
+            {"cursor": spaces.Box(low=np.array(
+                [-1.0, 1.0]), high=np.array([-1.0, 1.0]), dtype=np.float32),
+                "reset": spaces.Discrete(2)
+             })
+        self.observation_space = spaces.Box(low=0, high=1, shape=image_shape)
+
+        self.viewer = None
+
+        self.cursor = (shape[0] // 2, shape[1] // 2)
+        self.state = np.zeros((image_shape), dtype=np.uint8)
+        self.state[self.cursor] = 255
+
+        self.seed()
+        self.reset()
+
+    def step(self, action: spaces.Dict):
+        pass
+
+    def reset(self) -> spaces.Box:
+        self.state = np.zeros((self.shape), dtype=np.uint8)
+        self.cursor = (self.shape[0] // 2, self.shape[1] // 2)
+        self.state[self.cursor] = 255
+        return self.state
+
+    def seed(self, seed: int = None) -> [int]:
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
     def step(self, action):
-        ...
-    def reset(self):
-        ...
-        
-    def render(self, mode='human'):
-        ...
+        pass
+
+    def render(self, mode='human') -> bool:
+        if mode == 'array':
+            return self.state
+        elif mode == 'human':
+            from rendering import BlackAndWhiteImageViewer
+            if self.viewer is None:
+                self.viewer = BlackAndWhiteImageViewer(self.shape)
+            self.viewer.imshow(self.state)
+            return self.viewer.is_open
+
     def close(self):
-        ...
+        if self.viewer is not None:
+            self.viewer.close()
+            self.viewer = None
+
+
+if __name__ == "__main__":
+    image_shape = (512, 512)
+    env = EtchASketchEnv(image_shape)
+
+    while True:
+        env.render()
