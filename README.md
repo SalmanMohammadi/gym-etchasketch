@@ -1,1 +1,1 @@
-An open-ai gym env for etch-a-sketch.
+An open-ai gym env for etch-a-sketch. The idea behind this project was exploring pixel-level supervision for an agent which recreates images using an [Etch-A-Sketch](https://en.wikipedia.org/wiki/Etch_A_Sketch). I thought it would be interesting to see if an agent could learn purely based on e.g. the cross-entropy loss on the pixels of a predicted and ground-truth sketch.
